@@ -1,0 +1,68 @@
+name: CI
+env:
+  TZ: Asia/Shanghai
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Init Env
+        run: |
+          echo "SIGNED_APK=CopyLite.apk" >> $GITHUB_ENV
+
+      - name: Set JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Restore Keystore from Secrets
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | tr -d '\n' | base64 --decode > keystore.jks
+
+          if [ ! -f keystore.jks ]; then
+            echo "::error::密钥库文件未生成"
+            exit 1
+          fi
+
+          keytool -list -v \
+            -keystore keystore.jks \
+            -storepass "${{ secrets.KEY_PASSWORD }}" \
+            -alias "${{ secrets.ALIAS }}" || (echo "::error::密钥库验证失败"; exit 1)
+          
+          echo "CURRENT_PATH=$(pwd)"
+          echo "KEYSTORE_PATH=$(pwd)" >> $GITHUB_ENV
+
+      - name: Build Signed APK
+        env:
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            --build-cache \
+            -Pandroid.injected.signing.store.file=${{ env.KEYSTORE_PATH }}/keystore.jks \
+            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+      - name: Rename APK File
+        run: |
+          find ./app/build/outputs/apk/release -name '*.apk' -exec mv {} ${{ env.SIGNED_APK }} \;
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CopyLite-Action-APK
+          path: ${{ env.SIGNED_APK }}
+
+      - name: Cleanup
+        run: |
+          rm -f ${{ env.KEYSTORE_PATH }}/keystore.jks
+          shred -uz ${{ env.KEYSTORE_PATH }}/keystore.jks || true
