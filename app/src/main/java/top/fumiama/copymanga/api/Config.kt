@@ -32,7 +32,7 @@ object Config {
             if (field != null) return field
             field = Proxy(
                 R.string.apiProxyApiUrl,
-                Regex("^https://(api|www)\\.(copymanga|mangacopy|copy-manga|copy20)\\.\\w+/api/"),
+                Regex("^https://(api|www)\\.(copymanga|mangacopy|copy-manga|copy20|2025copy)\\.\\w+/api/"),
             )
             return field
         }
