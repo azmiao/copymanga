@@ -1,4 +1,4 @@
-name: web
+name: main
 env:
   TZ: Asia/Shanghai
 
@@ -14,7 +14,7 @@ jobs:
 
       - name: Init Env
         run: |
-          echo "SIGNED_APK=CopyLite.apk" >> $GITHUB_ENV
+          echo "SIGNED_APK=CopyManga.apk" >> $GITHUB_ENV
 
       - name: Set JDK
         uses: actions/setup-java@v4
@@ -59,7 +59,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CopyLite-Action-APK
+          name: CopyManga-Action-APK
           path: ${{ env.SIGNED_APK }}
 
       - name: Cleanup
